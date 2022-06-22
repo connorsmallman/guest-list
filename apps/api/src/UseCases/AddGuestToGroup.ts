@@ -5,10 +5,9 @@ type Command = {
   guestId: string;
 };
 
-class AddGuestToGroup {
+export class AddGuestToGroup {
   execute(command: Command) {
     const guestList = GuestList.create();
-
     guestList.addGuestToGroup(command.groupId, command.guestId);
   }
 }

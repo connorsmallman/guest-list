@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
+import { either as E } from 'fp-ts';
 
 import { GuestName } from './GuestName';
 import { GuestEmail } from './GuestEmail';
 import { GuestDTO } from '../DTOs/GuestDTO';
+import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlreadyExists';
 
 type GuestProps = {
   name: GuestName;
@@ -39,22 +41,26 @@ export class Guest {
   }
 
   equals(guest: Guest) {
-    return guest.id === this.id;
+    return guest.name === this.name;
   }
 
-  static create(dto: GuestDTO): Guest {
+  static create(
+    dto: GuestDTO,
+  ): E.Either<GuestWithThatNameAlreadyExists, Guest> {
     const name = GuestName.create(dto.name);
     const email = GuestEmail.create(dto.email);
 
-    return new Guest(
-      {
-        name,
-        email,
-        dietaryRequirements: dto.dietaryRequirements,
-        attending: dto.attending,
-        isChild: dto.isChild,
-      },
-      dto.id,
+    return E.right(
+      new Guest(
+        {
+          name,
+          email,
+          dietaryRequirements: dto.dietaryRequirements,
+          attending: dto.attending,
+          isChild: dto.isChild,
+        },
+        dto.id,
+      ),
     );
   }
 }

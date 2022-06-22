@@ -2,6 +2,8 @@ import * as base62 from 'base62';
 
 import { Group } from './Group';
 import { Guest } from './Guest';
+import { Either, left, right } from 'fp-ts/Either';
+import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlreadyExists';
 
 type GroupDTO = {
   allowedNumberOfChildren: number;
@@ -24,12 +26,14 @@ export class GuestList {
     this.groups.push(group);
   }
 
-  addGuest(guest: Guest) {
+  addGuest(guest: Guest): Either<GuestWithThatNameAlreadyExists, Guest> {
+    console.log(this);
     const isExisting = this.guests.find((g) => g.equals(guest));
     if (isExisting) {
-      throw new Error();
+      return left(new GuestWithThatNameAlreadyExists());
     }
     this.guests.push(guest);
+    return right(guest);
   }
 
   addGuestToGroup(groupId: number, guestId: string) {

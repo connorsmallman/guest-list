@@ -6,10 +6,13 @@ import { GuestList } from '../Domain/GuestList';
 @Injectable()
 export class GuestListRepository {
   find(): TE.TaskEither<Error, GuestList> {
-    return TE.right(new GuestList());
+    return TE.right({
+      guests: [],
+      households: [],
+    });
   }
 
   save(guestList: GuestList): TE.TaskEither<Error, void> {
-    return null;
+    return TE.right(null);
   }
 }

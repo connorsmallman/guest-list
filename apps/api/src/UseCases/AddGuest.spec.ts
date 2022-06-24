@@ -5,6 +5,7 @@ import { AddGuest } from './AddGuest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { GuestList } from '../Domain/GuestList';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
+import { createGuest } from '../Domain/Guest';
 
 describe('Add guest', () => {
   test('add new guest', async () => {
@@ -14,7 +15,10 @@ describe('Add guest', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = new GuestList();
+    const guestListMock = {
+      guests: [],
+      households: [],
+    };
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
     const useCase = new AddGuest(new GuestRepositoryMock());
@@ -23,7 +27,7 @@ describe('Add guest', () => {
       email: randEmail(),
     };
 
-    const response = await useCase.execute(guestDTO)();
+    await useCase.execute(guestDTO)();
 
     expect(findMock).toHaveBeenCalled();
     expect(saveMock).toHaveBeenCalled();
@@ -41,7 +45,10 @@ describe('Add guest', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = new GuestList();
+    const guestListMock = {
+      guests: [],
+      households: [],
+    };
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
     const useCase = new AddGuest(new GuestRepositoryMock());

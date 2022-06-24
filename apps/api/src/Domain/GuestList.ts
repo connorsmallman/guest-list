@@ -1,83 +1,117 @@
 import * as base62 from 'base62';
+import { either as E } from 'fp-ts';
 
-import { Group } from './Group';
+import { addGuest, hasGuest, Household } from './Household';
 import { Guest } from './Guest';
-import { Either, left, right } from 'fp-ts/Either';
 import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlreadyExists';
+import { GuestNotFound } from './problems/GuestNotFound';
+import { HouseholdNotFound } from './problems/HouseholdNotFound';
 
-type GroupDTO = {
-  allowedNumberOfChildren: number;
-  allowedNumberOfAdults: number;
+export type GuestList = {
+  households: Household[];
+  guests: Guest[];
 };
 
-export class GuestList {
-  groups: Group[] = [];
-  guests: Guest[] = [];
+export const getNextHouseholdId = (
+  guestList: GuestList,
+): E.Either<Error, number> => E.right(guestList.households.length + 1);
 
-  createGroup(dto: GroupDTO) {
-    const nextId = this.groups.length + 1;
-    const props = {
-      allowedNumberOfChildren: dto.allowedNumberOfChildren,
-      allowedNumberOfAdults: dto.allowedNumberOfAdults,
-      guests: [],
-      code: base62.encode(nextId + 1000),
-    };
-    const group = Group.create(props, nextId);
-    this.groups.push(group);
+export const generateHouseholdCode = (
+  householdId: number,
+): E.Either<Error, string> => E.right(base62.encode(householdId + 1000));
+
+export const addHousehold = (
+  guestList: GuestList,
+  household: Household,
+): E.Either<Error, GuestList> => {
+  guestList.households.push(household);
+  return E.right(guestList);
+};
+
+export const addGuestToList = (
+  guestList: GuestList,
+  guest: Guest,
+): E.Either<GuestWithThatNameAlreadyExists, GuestList> => {
+  const isExisting = guestList.guests.find((g) => g.name === guest.name);
+
+  if (isExisting) {
+    return E.left(new GuestWithThatNameAlreadyExists());
   }
 
-  addGuest(guest: Guest): Either<GuestWithThatNameAlreadyExists, Guest> {
-    console.log(this);
-    const isExisting = this.guests.find((g) => g.equals(guest));
-    if (isExisting) {
-      return left(new GuestWithThatNameAlreadyExists());
-    }
-    this.guests.push(guest);
-    return right(guest);
+  guestList.guests.push(guest);
+
+  return E.right(guestList);
+};
+
+export const addGuestToHousehold = (
+  guestList: GuestList,
+  householdId: number,
+  guestId: string,
+): E.Either<GuestNotFound | HouseholdNotFound, GuestList> => {
+  const guest = guestList.guests.find((g) => g.id === guestId);
+
+  if (!guest) {
+    return E.left(new GuestNotFound());
   }
 
-  addGuestToGroup(groupId: number, guestId: string) {
-    const guest = this.guests.find((g) => g.id === guestId);
+  const household = guestList.households.find((h) => h.id === householdId);
 
-    if (guest) {
+  if (!household) {
+    return E.left(new HouseholdNotFound());
+  }
+
+  return E.right({
+    ...guestList,
+    households: guestList.households.map((h) => {
+      return addGuest(h, guest);
+    }),
+  });
+};
+
+export const rsvp = (
+  guestList: GuestList,
+  householdId: number,
+  updatedGuests: Guest[],
+) => {
+  const household = guestList.households.find((g) => g.id === householdId);
+
+  const guestIsInHousehold = updatedGuests.some((g) => hasGuest(household, g));
+
+  if (!guestIsInHousehold) {
+    throw new Error();
+  }
+
+  if (household.allowedNumberOfChildren) {
+    const children = updatedGuests.filter((g) => g.isChild);
+    if (children.length > household.allowedNumberOfChildren) {
       throw new Error();
     }
-
-    this.groups = this.groups.map((g) => {
-      if (g.id === groupId) {
-        g.addGuest(guest);
-      }
-      return g;
-    });
   }
-
-  rsvp(groupId: number, updatedGuests: Guest[]) {
-    const group = this.groups.find((g) => g.id === groupId);
-
-    const guestIsInGroup = updatedGuests.some((g) => group.hasGuest(g));
-
-    if (!guestIsInGroup) {
+  if (household.allowedNumberOfAdults) {
+    const adults = updatedGuests.filter((g) => !g.isChild);
+    if (adults.length > household.allowedNumberOfAdults) {
       throw new Error();
     }
-
-    if (group.allowedNumberOfChildren) {
-      const children = updatedGuests.filter((g) => g.isChild);
-      if (children.length > group.allowedNumberOfChildren) {
-        throw new Error();
-      }
-    }
-    if (group.allowedNumberOfAdults) {
-      const adults = updatedGuests.filter((g) => !g.isChild);
-      if (adults.length > group.allowedNumberOfAdults) {
-        throw new Error();
-      }
-    }
-    for (const guest of updatedGuests) {
-      group.updateGuest(guest);
-    }
   }
 
-  static create() {
-    return new GuestList();
-  }
-}
+  return {
+    ...guestList,
+    households: guestList.households.map((h) => {
+      if (h.id === householdId) {
+        return {
+          ...h,
+          guests: h.guests.map((g) => {
+            const guestUpdates = updatedGuests.find((ug) => ug.id === g.id);
+            if (guestUpdates) {
+              return {
+                ...g,
+                guestUpdates,
+              };
+            }
+            return g;
+          }),
+        };
+      }
+    }),
+  };
+};

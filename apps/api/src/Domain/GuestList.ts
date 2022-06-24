@@ -1,5 +1,9 @@
 import * as base62 from 'base62';
 import { either as E } from 'fp-ts';
+import { struct } from 'fp-ts/Eq';
+import { Eq as eqString } from 'fp-ts/string';
+import { Eq as eqNumber } from 'fp-ts/number';
+import { getEq } from 'fp-ts/Array';
 
 import { addGuest, hasGuest, Household } from './Household';
 import { Guest } from './Guest';
@@ -11,6 +15,20 @@ export type GuestList = {
   households: Household[];
   guests: Guest[];
 };
+
+const eqGuest = struct({
+  id: eqString,
+  name: eqString,
+  email: eqString,
+});
+
+const eqHousehold = struct({
+  code: eqString,
+  id: eqNumber,
+  allowedNumberOfChildren: eqNumber,
+  allowedNumberOfAdults: eqNumber,
+  guests: getEq(eqGuest),
+});
 
 export const getNextHouseholdId = (
   guestList: GuestList,
@@ -32,7 +50,7 @@ export const addGuestToList = (
   guestList: GuestList,
   guest: Guest,
 ): E.Either<GuestWithThatNameAlreadyExists, GuestList> => {
-  const isExisting = guestList.guests.find((g) => g.name === guest.name);
+  const isExisting = guestList.guests.find((g) => eqGuest.equals(g, guest));
 
   if (isExisting) {
     return E.left(new GuestWithThatNameAlreadyExists());
@@ -48,13 +66,15 @@ export const addGuestToHousehold = (
   householdId: number,
   guestId: string,
 ): E.Either<GuestNotFound | HouseholdNotFound, GuestList> => {
-  const guest = guestList.guests.find((g) => g.id === guestId);
+  const guest = guestList.guests.find((g) => eqString.equals(g.id, guestId));
 
   if (!guest) {
     return E.left(new GuestNotFound());
   }
 
-  const household = guestList.households.find((h) => h.id === householdId);
+  const household = guestList.households.find((h) =>
+    eqNumber.equals(h.id, householdId),
+  );
 
   if (!household) {
     return E.left(new HouseholdNotFound());
@@ -73,7 +93,9 @@ export const rsvp = (
   householdId: number,
   updatedGuests: Guest[],
 ) => {
-  const household = guestList.households.find((g) => g.id === householdId);
+  const household = guestList.households.find((h) =>
+    eqNumber.equals(h.id, householdId),
+  );
 
   const guestIsInHousehold = updatedGuests.some((g) => hasGuest(household, g));
 
@@ -97,11 +119,13 @@ export const rsvp = (
   return {
     ...guestList,
     households: guestList.households.map((h) => {
-      if (h.id === householdId) {
+      if (eqHousehold.equals(h, household)) {
         return {
           ...h,
           guests: h.guests.map((g) => {
-            const guestUpdates = updatedGuests.find((ug) => ug.id === g.id);
+            const guestUpdates = updatedGuests.find((ug) =>
+              eqString.equals(ug.id, g.id),
+            );
             if (guestUpdates) {
               return {
                 ...g,
@@ -112,6 +136,7 @@ export const rsvp = (
           }),
         };
       }
+      return h;
     }),
   };
 };

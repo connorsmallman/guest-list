@@ -22,6 +22,10 @@ const eqGuest = struct({
   email: eqString,
 });
 
+const eqGuestName = struct({
+  name: eqString,
+});
+
 const eqHousehold = struct({
   code: eqString,
   id: eqNumber,
@@ -50,7 +54,7 @@ export const addGuestToList = (
   guestList: GuestList,
   guest: Guest,
 ): E.Either<GuestWithThatNameAlreadyExists, GuestList> => {
-  const isExisting = guestList.guests.find((g) => eqGuest.equals(g, guest));
+  const isExisting = guestList.guests.find((g) => eqGuestName.equals(g, guest));
 
   if (isExisting) {
     return E.left(new GuestWithThatNameAlreadyExists());

@@ -1,11 +1,11 @@
-import { randEmail, randFullName } from '@ngneat/falso';
-import { taskEither as TE, either as E } from 'fp-ts';
+import { randEmail, randFullName, randUuid } from '@ngneat/falso';
+import { taskEither as TE, either as E, option as O } from 'fp-ts';
 
 import { AddGuest } from './AddGuest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { GuestList } from '../Domain/GuestList';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
 import { createGuest } from '../Domain/Guest';
+import { pipe } from 'fp-ts/function';
 
 describe('Add guest', () => {
   test('add new guest', async () => {
@@ -20,22 +20,36 @@ describe('Add guest', () => {
       households: [],
     };
     findMock.mockReturnValue(TE.of(guestListMock));
-    saveMock.mockReturnValue(TE.of(null));
+    saveMock.mockReturnValue(TE.of(guestListMock));
     const useCase = new AddGuest(new GuestRepositoryMock());
-    const guestDTO = {
-      name: randFullName(),
-      email: randEmail(),
+    const guestName = randFullName();
+    const guestEmail = randEmail();
+    const guestId = randUuid();
+    const command = {
+      name: guestName,
+      email: guestEmail,
+      id: guestId,
     };
 
-    await useCase.execute(guestDTO)();
+    const guest = pipe(
+      createGuest({ name: guestName, email: guestEmail }, guestId),
+      E.getOrElse(() => {
+        throw new Error('could not create guest');
+      }),
+    );
+
+    const response = await useCase.execute(command)();
+
+    if (E.isLeft(response)) {
+      throw new Error(response.left.message);
+    }
 
     expect(findMock).toHaveBeenCalled();
-    expect(saveMock).toHaveBeenCalled();
-    expect(guestListMock.guests[0].name).toEqual(guestDTO.name);
-    expect(guestListMock.guests[0].email).toEqual(guestDTO.email);
-    expect(guestListMock.guests[0].dietaryRequirements).toEqual('');
-    expect(guestListMock.guests[0].isChild).toEqual(false);
-    expect(guestListMock.guests[0].attending).toEqual(null);
+    expect(saveMock).toHaveBeenCalledWith({
+      guests: [guest],
+      households: [],
+    });
+    expect(response.right).toEqual(guest);
   });
 
   test('should fail if guest already exists', async () => {
@@ -50,15 +64,27 @@ describe('Add guest', () => {
       households: [],
     };
     findMock.mockReturnValue(TE.of(guestListMock));
-    saveMock.mockReturnValue(TE.of(null));
+    saveMock.mockReturnValue(TE.of(guestListMock));
     const useCase = new AddGuest(new GuestRepositoryMock());
-    const guestDTO = {
-      name: randFullName(),
-      email: randEmail(),
+    const guestName = randFullName();
+    const guestEmail = randEmail();
+    const guestId = randUuid();
+    const command = {
+      name: guestName,
+      email: guestEmail,
+      id: guestId,
     };
 
-    await useCase.execute(guestDTO)();
-    const response = await useCase.execute(guestDTO)();
+    const guest = pipe(
+      createGuest({ name: guestName, email: guestEmail }, guestId),
+      E.getOrElse(() => {
+        throw new Error('could not create guest');
+      }),
+    );
+
+    guestListMock.guests.push(guest);
+
+    const response = await useCase.execute(command)();
     expect(response).toEqual(E.left(new GuestWithThatNameAlreadyExists()));
   });
 });

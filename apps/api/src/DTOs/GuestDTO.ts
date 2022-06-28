@@ -5,4 +5,5 @@ export type GuestDTO = {
   dietaryRequirements: string;
   attending: boolean;
   isChild: boolean;
+  householdId: number;
 };

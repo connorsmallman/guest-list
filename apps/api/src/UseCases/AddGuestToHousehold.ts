@@ -1,18 +1,19 @@
 import { pipe } from 'fp-ts/function';
-import { taskEither as TE } from 'fp-ts';
+import { taskEither as TE, array as A, either as E } from 'fp-ts';
 import { Injectable } from '@nestjs/common';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { Household } from '../Domain/Household';
 import { GuestNotFound } from '../Domain/problems/GuestNotFound';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
+import { addGuestToHousehold } from '../Domain/GuestList';
+import { Household } from '../Domain/Household';
 
 type Command = {
-  groupId: number;
+  householdId: number;
   guestId: string;
 };
 
 @Injectable()
-export class AddGuestToGroup {
+export class AddGuestToHousehold {
   constructor(readonly guestListRepository: GuestListRepository) {}
 
   execute(
@@ -23,7 +24,17 @@ export class AddGuestToGroup {
       TE.chain((guestList) =>
         pipe(
           command,
-          ({ groupId, guestId }) => guestList.addGuestToGroup(groupId, guestId),
+          ({ householdId, guestId }) =>
+            addGuestToHousehold(guestList, householdId, guestId),
+          TE.fromEither,
+        ),
+      ),
+      TE.chainFirst(this.guestListRepository.save),
+      TE.chain((guestList) =>
+        pipe(
+          guestList.households,
+          A.findFirst((h) => h.id === command.householdId),
+          E.fromOption(() => new HouseholdNotFound()),
           TE.fromEither,
         ),
       ),

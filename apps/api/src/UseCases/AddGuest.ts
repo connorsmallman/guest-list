@@ -5,8 +5,10 @@ import { pipe } from 'fp-ts/function';
 import { createGuest, Guest } from '../Domain/Guest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { addGuestToList } from '../Domain/GuestList';
+import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
 
 type Command = {
+  id?: string;
   name: string;
   email?: string;
   dietaryRequirements?: string;
@@ -18,25 +20,29 @@ type Command = {
 export class AddGuest {
   constructor(readonly guestListRepository: GuestListRepository) {}
 
-  execute(command: Command): TE.TaskEither<Error, Guest> {
+  execute(
+    command: Command,
+  ): TE.TaskEither<Error | GuestWithThatNameAlreadyExists, Guest> {
     return pipe(
-      E.bindTo('guest')(
-        createGuest(
-          command.name,
-          command.email,
-          command.dietaryRequirements || '',
+      TE.Do,
+      TE.bind('guest', () =>
+        pipe(
+          createGuest({ name: command.name, email: command.email }, command.id),
+          TE.fromEither,
         ),
       ),
-      TE.fromEither,
       TE.bind('guestList', this.guestListRepository.find),
-      TE.chainFirst(({ guest, guestList }) =>
-        pipe(addGuestToList(guestList, guest), TE.fromEither),
+      TE.chain(({ guest, guestList }) =>
+        pipe(
+          addGuestToList(guestList, guest),
+          TE.fromEither,
+          TE.map((guestList) => ({ guest, guestList })),
+        ),
       ),
       TE.chainFirst(({ guestList }) =>
         this.guestListRepository.save(guestList),
       ),
       TE.map(({ guest }) => guest),
-      TE.mapLeft((error) => error),
     );
   }
 }

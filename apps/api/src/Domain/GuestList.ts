@@ -1,146 +1,191 @@
-import * as base62 from 'base62';
-import { either as E } from 'fp-ts';
-import { struct } from 'fp-ts/Eq';
+import Base62str from 'base62str';
+import {
+  either as E,
+  option as O,
+  array as A,
+  boolean as B,
+  semigroup as SG,
+} from 'fp-ts';
 import { Eq as eqString } from 'fp-ts/string';
-import { Eq as eqNumber } from 'fp-ts/number';
 import { getEq } from 'fp-ts/Array';
+import { identity, increment, pipe } from 'fp-ts/function';
 
-import { addGuest, hasGuest, Household } from './Household';
+import { Household } from './Household';
 import { Guest } from './Guest';
-import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlreadyExists';
 import { GuestNotFound } from './problems/GuestNotFound';
 import { HouseholdNotFound } from './problems/HouseholdNotFound';
+import { HouseholdCode } from './HouseholdCode';
+import { GuestId } from './GuestId';
+import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlreadyExists';
+import { HouseholdAlreadyExists } from './problems/HouseholdAlreadyExists';
+import { GuestsNotFoundInHousehold } from './problems/GuestsNotFoundInHousehold';
+import { HouseholdId } from './HouseholdId';
+
+const base62 = Base62str.createInstance();
 
 export type GuestList = {
   households: Household[];
   guests: Guest[];
 };
 
-const eqGuest = struct({
-  id: eqString,
-  name: eqString,
-  email: eqString,
-});
-
-const eqGuestName = struct({
-  name: eqString,
-});
-
-const eqHousehold = struct({
-  code: eqString,
-  id: eqNumber,
-  allowedNumberOfChildren: eqNumber,
-  allowedNumberOfAdults: eqNumber,
-  guests: getEq(eqGuest),
-});
-
 export const getNextHouseholdId = (
   guestList: GuestList,
-): E.Either<Error, number> => E.right(guestList.households.length + 1);
+): E.Either<Error, number> =>
+  E.right(pipe(guestList.households, A.size, increment));
 
 export const generateHouseholdCode = (
   householdId: number,
-): E.Either<Error, string> => E.right(base62.encode(householdId + 1000));
+): E.Either<Error, string> =>
+  E.right(base62.encodeStr((1000 + householdId).toString()));
 
 export const addHousehold = (
   guestList: GuestList,
   household: Household,
-): E.Either<Error, GuestList> => {
-  guestList.households.push(household);
-  return E.right(guestList);
+): E.Either<HouseholdAlreadyExists, GuestList> => {
+  return pipe(
+    guestList.households,
+    A.findIndex((h: Household) => h.id === household.id),
+    E.fromOption(() => household),
+    E.swap,
+    E.mapLeft(() => new HouseholdAlreadyExists()),
+    E.map((h) => pipe(guestList.households, A.append(h))),
+    E.map((updatedHouseholds) => ({
+      ...guestList,
+      households: updatedHouseholds,
+    })),
+  );
 };
 
 export const addGuestToList = (
   guestList: GuestList,
   guest: Guest,
 ): E.Either<GuestWithThatNameAlreadyExists, GuestList> => {
-  const isExisting = guestList.guests.find((g) => eqGuestName.equals(g, guest));
-
-  if (isExisting) {
-    return E.left(new GuestWithThatNameAlreadyExists());
-  }
-
-  guestList.guests.push(guest);
-
-  return E.right(guestList);
+  return pipe(
+    guestList.guests,
+    A.exists((g: Guest) => g.name === guest.name),
+    O.fromPredicate((s) => {
+      return !s;
+    }),
+    E.fromOption(() => {
+      return new GuestWithThatNameAlreadyExists();
+    }),
+    E.map(() => pipe(guestList.guests, A.append(guest))),
+    E.map((updatedGuests) => ({
+      ...guestList,
+      guests: updatedGuests,
+    })),
+  );
 };
 
 export const addGuestToHousehold = (
   guestList: GuestList,
   householdId: number,
-  guestId: string,
+  guestId: GuestId,
 ): E.Either<GuestNotFound | HouseholdNotFound, GuestList> => {
-  const guest = guestList.guests.find((g) => eqString.equals(g.id, guestId));
+  return pipe(
+    E.Do,
+    // Bind guestList to guestList
+    E.bind('guestList', () => E.of(guestList)),
+    // Bind guest or return GuestNotFound Error
+    E.bind('guest', () =>
+      pipe(
+        guestList.guests,
+        A.findFirst((g: Guest) => g.id === guestId),
+        E.fromOption(() => new GuestNotFound()),
+      ),
+    ),
+    // Bind household or return HouseholdNotFound Error
+    E.bind('household', () =>
+      pipe(
+        guestList.households,
+        A.findFirst((h: Household) => h.id === householdId),
+        E.fromOption(() => new HouseholdNotFound()),
+      ),
+    ),
+    // Return guestList with updated households and guests
+    E.map(({ guestList, guest, household }) => {
+      const updatedGuest = {
+        ...guest,
+        household: O.of(household.id),
+      };
+      const updatedHousehold = {
+        ...household,
+        guests: pipe(household.guests, A.append(updatedGuest.id)),
+      };
 
-  if (!guest) {
-    return E.left(new GuestNotFound());
-  }
-
-  const household = guestList.households.find((h) =>
-    eqNumber.equals(h.id, householdId),
-  );
-
-  if (!household) {
-    return E.left(new HouseholdNotFound());
-  }
-
-  return E.right({
-    ...guestList,
-    households: guestList.households.map((h) => {
-      return addGuest(h, guest);
+      return {
+        ...guestList,
+        households: pipe(
+          guestList.households,
+          A.findIndex((h) => h.id === household.id),
+          O.map((i) =>
+            pipe(guestList.households, A.updateAt(i, updatedHousehold)),
+          ),
+          O.flatten,
+          O.fold(() => guestList.households, identity),
+        ),
+        guests: pipe(
+          guestList.guests,
+          A.findIndex((g) => g.id === guest.id),
+          O.map((i) => pipe(guestList.guests, A.updateAt(i, updatedGuest))),
+          O.flatten,
+          O.fold(() => guestList.guests, identity),
+        ),
+      };
     }),
-  });
+  );
 };
 
 export const rsvp = (
   guestList: GuestList,
-  householdId: number,
-  updatedGuests: Guest[],
-) => {
-  const household = guestList.households.find((h) =>
-    eqNumber.equals(h.id, householdId),
-  );
-
-  const guestIsInHousehold = updatedGuests.some((g) => hasGuest(household, g));
-
-  if (!guestIsInHousehold) {
-    throw new Error();
-  }
-
-  if (household.allowedNumberOfChildren) {
-    const children = updatedGuests.filter((g) => g.isChild);
-    if (children.length > household.allowedNumberOfChildren) {
-      throw new Error();
-    }
-  }
-  if (household.allowedNumberOfAdults) {
-    const adults = updatedGuests.filter((g) => !g.isChild);
-    if (adults.length > household.allowedNumberOfAdults) {
-      throw new Error();
-    }
-  }
-
-  return {
-    ...guestList,
-    households: guestList.households.map((h) => {
-      if (eqHousehold.equals(h, household)) {
-        return {
-          ...h,
-          guests: h.guests.map((g) => {
-            const guestUpdates = updatedGuests.find((ug) =>
-              eqString.equals(ug.id, g.id),
-            );
-            if (guestUpdates) {
-              return {
-                ...g,
-                guestUpdates,
-              };
-            }
-            return g;
-          }),
-        };
-      }
-      return h;
+  householdCode: HouseholdCode,
+  guests: Guest[],
+): E.Either<HouseholdNotFound | GuestsNotFoundInHousehold, GuestList> => {
+  const Eq = getEq(eqString);
+  return pipe(
+    guestList.households,
+    // Find household or return error
+    A.findFirst((h) => h.code === householdCode),
+    E.fromOption(() => new HouseholdNotFound()),
+    // Check guests are in the household
+    E.chainFirst((household) =>
+      pipe(
+        Eq.equals(
+          household.guests,
+          guests.map((g) => g.id),
+        ),
+        B.fold(
+          () => E.left(new GuestsNotFoundInHousehold()),
+          () => E.right(household),
+        ),
+      ),
+    ),
+    E.map(() => {
+      const semigroupGuest: SG.Semigroup<Guest> = SG.struct({
+        id: SG.first<string>(),
+        name: SG.last<string>(),
+        email: SG.last<string>(),
+        dietaryRequirements: O.getMonoid<string>(SG.last()),
+        attending: O.getMonoid<boolean>(SG.last()),
+        isChild: SG.last<boolean>(),
+        household: O.getMonoid<HouseholdId>(SG.last()),
+      });
+      return {
+        ...guestList,
+        guests: pipe(
+          guestList.guests,
+          A.map((guest) =>
+            pipe(
+              guests,
+              A.findFirst((update) => update.id === guest.id),
+              O.fold(
+                () => guest,
+                (update) => semigroupGuest.concat(guest, update),
+              ),
+            ),
+          ),
+        ),
+      };
     }),
-  };
+  );
 };

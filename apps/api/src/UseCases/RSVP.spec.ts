@@ -37,7 +37,7 @@ describe('RSVP', () => {
       }),
     );
     const household: Household = pipe(
-      createHousehold(householdId, householdCode),
+      createHousehold({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -155,7 +155,7 @@ describe('RSVP', () => {
       }),
     );
     const household: Household = pipe(
-      createHousehold(householdId, householdCode),
+      createHousehold({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -163,12 +163,15 @@ describe('RSVP', () => {
     const guestName = randFullName();
     const guestEmail = randEmail();
     const guestId = randUuid();
-    const guest: GuestDTO = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
-      E.getOrElse(() => {
-        throw new Error('Failed to create guest');
-      }),
-    );
+    const guest: GuestDTO = {
+      name: guestName,
+      email: guestEmail,
+      id: guestId,
+      dietaryRequirements: '',
+      attending: true,
+      isChild: true,
+      householdId: 1,
+    };
 
     guestListMock.households.push(household);
     findMock.mockReturnValue(TE.of(guestListMock));

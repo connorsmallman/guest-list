@@ -3,7 +3,7 @@ import { taskEither as TE } from 'fp-ts';
 import { CreateHousehold } from './CreateHousehold';
 
 describe('Create Household', () => {
-  test('should add a new group', async () => {
+  test('should add a new household', async () => {
     const findMock = jest.fn();
     const saveMock = jest.fn();
     const GuestListRepositoryMock = <jest.Mock<GuestListRepository>>jest.fn(
@@ -34,4 +34,14 @@ describe('Create Household', () => {
       }
     `);
   });
+
+  test('should fail if unable to create id', async () => {});
+
+  test('should fail if unable to generate code', async () => {});
+
+  test('should fail if unable to create household', async () => {});
+
+  test('should fail if unable to add new household to guest list', async () => {});
+
+  test('should fail if unable to save guest list', async () => {});
 });

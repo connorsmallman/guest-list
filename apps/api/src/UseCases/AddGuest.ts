@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { taskEither as TE, either as E } from 'fp-ts';
+import { taskEither as TE } from 'fp-ts';
 import { pipe } from 'fp-ts/function';
 
 import { createGuest, Guest } from '../Domain/Guest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { addGuestToList } from '../Domain/GuestList';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
+import { FailedToAddGuest } from '../Domain/problems/FailedToAddGuest';
+import { FailedToCreateGuest } from '../Domain/problems/FailedtoCreateGuest';
 
 type Command = {
   id?: string;
@@ -22,13 +24,17 @@ export class AddGuest {
 
   execute(
     command: Command,
-  ): TE.TaskEither<Error | GuestWithThatNameAlreadyExists, Guest> {
+  ): TE.TaskEither<
+    FailedToAddGuest | FailedToCreateGuest | GuestWithThatNameAlreadyExists,
+    Guest
+  > {
     return pipe(
       TE.Do,
       TE.bind('guest', () =>
         pipe(
           createGuest({ name: command.name, email: command.email }, command.id),
           TE.fromEither,
+          TE.mapLeft(() => new FailedToAddGuest()),
         ),
       ),
       TE.bind('guestList', this.guestListRepository.find),
@@ -37,10 +43,14 @@ export class AddGuest {
           addGuestToList(guestList, guest),
           TE.fromEither,
           TE.map((guestList) => ({ guest, guestList })),
+          TE.mapLeft(() => new FailedToAddGuest()),
         ),
       ),
       TE.chainFirst(({ guestList }) =>
-        this.guestListRepository.save(guestList),
+        pipe(
+          this.guestListRepository.save(guestList),
+          TE.mapLeft(() => new FailedToAddGuest()),
+        ),
       ),
       TE.map(({ guest }) => guest),
     );

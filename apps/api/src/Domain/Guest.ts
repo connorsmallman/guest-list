@@ -1,22 +1,14 @@
 import { v4 as uuidV4 } from 'uuid';
-import { either as E } from 'fp-ts';
-import { struct } from 'fp-ts/Eq';
-import { Eq as eqString } from 'fp-ts/string';
-import { Eq as eqBoolean } from 'fp-ts/boolean';
-import { option as O } from 'fp-ts';
+import * as t from 'io-ts';
+import { either as E, option as O } from 'fp-ts';
+import { formatValidationErrors } from 'io-ts-reporters';
 
 import { HouseholdId } from './HouseholdId';
-import { eqHousehold, Household } from './Household';
-
-export const eqGuest = struct({
-  id: eqString,
-  name: eqString,
-  email: eqString,
-  dietaryRequirements: O.getEq(eqString),
-  attending: O.getEq(eqBoolean),
-  isChild: eqBoolean,
-  household: eqHousehold,
-});
+import { FailedToCreateGuest } from './problems/FailedtoCreateGuest';
+import { pipe } from 'fp-ts/function';
+import { GuestNameC } from './GuestName';
+import { GuestId, GuestIdC } from './GuestId';
+import { Logger } from '@nestjs/common';
 
 export interface Guest {
   id: string;
@@ -32,29 +24,62 @@ type CreateGuestProps = {
   name: string;
   email: string;
   dietaryRequirements?: string;
-  attending?: null | boolean;
-  isChild?: null | boolean;
-  householdId?: null | HouseholdId;
+  attending?: boolean;
+  isChild?: boolean;
+  householdId?: number;
 };
+
+const GuestC = t.type({
+  id: GuestIdC,
+  name: GuestNameC,
+  email: t.string,
+  dietaryRequirements: t.union([t.string, t.null]),
+  attending: t.union([t.boolean, t.null]),
+  isChild: t.union([t.boolean, t.null]),
+  householdId: t.union([t.number, t.null]),
+});
 
 export const createGuest = (
   {
     name,
     email,
-    dietaryRequirements = '',
+    dietaryRequirements = null,
     attending = null,
     isChild = false,
     householdId = null,
   }: CreateGuestProps,
-  id?: string,
-): E.Either<Error, Guest> => {
-  return E.right({
-    id: id || uuidV4(),
-    name,
-    email,
-    dietaryRequirements: O.fromNullable(dietaryRequirements),
-    attending: O.fromNullable(attending),
-    isChild,
-    household: O.fromNullable(householdId),
-  });
+  id?: GuestId,
+): E.Either<FailedToCreateGuest, Guest> => {
+  return pipe(
+    GuestC.decode({
+      name,
+      email,
+      dietaryRequirements,
+      attending,
+      isChild,
+      householdId,
+      id: id || uuidV4(),
+    }),
+    E.mapLeft(formatValidationErrors),
+    E.fold(
+      (errors) => {
+        Logger.error(errors);
+        return E.left(
+          new FailedToCreateGuest(
+            `Failed to create guest: ${JSON.stringify(errors)}`,
+          ),
+        );
+      },
+      (value) =>
+        E.right({
+          id: value.id,
+          name: value.name,
+          email: value.email,
+          dietaryRequirements: O.fromNullable(value.dietaryRequirements),
+          attending: O.fromNullable(value.attending),
+          isChild: value.isChild,
+          household: O.fromNullable(value.householdId),
+        }),
+    ),
+  );
 };

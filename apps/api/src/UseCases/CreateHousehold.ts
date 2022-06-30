@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { pipe } from 'fp-ts/function';
-import { taskEither as TE, either as E, array as A } from 'fp-ts';
+import { taskEither as TE, io as IO } from 'fp-ts';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { createHousehold, Household } from '../Domain/Household';
@@ -9,22 +9,31 @@ import {
   generateHouseholdCode,
   getNextHouseholdId,
 } from '../Domain/GuestList';
+import { FailedToCreateHousehold } from '../Domain/problems/FailedToCreateHousehold';
 
 @Injectable()
 export class CreateHousehold {
   constructor(readonly guestListRepository: GuestListRepository) {}
-  execute(): TE.TaskEither<Error, Household> {
+  execute(): TE.TaskEither<FailedToCreateHousehold, Household> {
     return pipe(
       TE.Do,
       TE.bind('guestList', this.guestListRepository.find),
       TE.bind('id', ({ guestList }) =>
-        pipe(getNextHouseholdId(guestList), TE.fromEither),
+        pipe(
+          getNextHouseholdId(guestList),
+          TE.fromEither,
+          TE.mapLeft(() => new FailedToCreateHousehold()),
+        ),
       ),
       TE.bind('code', ({ id }) =>
-        pipe(generateHouseholdCode(id), TE.fromEither),
+        pipe(
+          generateHouseholdCode(id),
+          TE.fromEither,
+          TE.mapLeft(() => new FailedToCreateHousehold()),
+        ),
       ),
       TE.bind('household', ({ id, code }) =>
-        pipe(createHousehold(id, code), TE.fromEither),
+        pipe(createHousehold({ id, code }), TE.fromEither),
       ),
       TE.chain(({ guestList, household }) =>
         pipe(
@@ -34,10 +43,14 @@ export class CreateHousehold {
             guestList: updatedGuestList,
             household,
           })),
+          TE.mapLeft(() => new FailedToCreateHousehold()),
         ),
       ),
       TE.chainFirst(({ guestList }) =>
-        this.guestListRepository.save(guestList),
+        pipe(
+          this.guestListRepository.save(guestList),
+          TE.mapLeft(() => new FailedToCreateHousehold()),
+        ),
       ),
       TE.map(({ household }) => household),
     );

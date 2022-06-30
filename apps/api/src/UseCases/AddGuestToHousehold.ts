@@ -6,6 +6,7 @@ import { GuestNotFound } from '../Domain/problems/GuestNotFound';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { addGuestToHousehold } from '../Domain/GuestList';
 import { Household } from '../Domain/Household';
+import { FailedToAddGuestToHousehold } from '../Domain/problems/FailedToAddGuestToHousehold';
 
 type Command = {
   householdId: number;
@@ -18,7 +19,10 @@ export class AddGuestToHousehold {
 
   execute(
     command: Command,
-  ): TE.TaskEither<GuestNotFound | HouseholdNotFound, Household> {
+  ): TE.TaskEither<
+    GuestNotFound | HouseholdNotFound | FailedToAddGuestToHousehold,
+    Household
+  > {
     return pipe(
       this.guestListRepository.find(),
       TE.chain((guestList) =>
@@ -29,7 +33,12 @@ export class AddGuestToHousehold {
           TE.fromEither,
         ),
       ),
-      TE.chainFirst(this.guestListRepository.save),
+      TE.chainFirst((guestList) =>
+        pipe(
+          this.guestListRepository.save(guestList),
+          TE.mapLeft(() => new FailedToAddGuestToHousehold()),
+        ),
+      ),
       TE.chain((guestList) =>
         pipe(
           guestList.households,

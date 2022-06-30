@@ -20,6 +20,8 @@ import { GuestWithThatNameAlreadyExists } from './problems/GuestWithThatNameAlre
 import { HouseholdAlreadyExists } from './problems/HouseholdAlreadyExists';
 import { GuestsNotFoundInHousehold } from './problems/GuestsNotFoundInHousehold';
 import { HouseholdId } from './HouseholdId';
+import { FailedToGetNextHouseholdId } from './problems/FailedToGetNextHouseholdId';
+import { FailedToGenerateHouseholdCode } from './problems/FailedToGenerateHouseholdCode';
 
 const base62 = Base62str.createInstance();
 
@@ -30,12 +32,12 @@ export type GuestList = {
 
 export const getNextHouseholdId = (
   guestList: GuestList,
-): E.Either<Error, number> =>
+): E.Either<FailedToGetNextHouseholdId, number> =>
   E.right(pipe(guestList.households, A.size, increment));
 
 export const generateHouseholdCode = (
   householdId: number,
-): E.Either<Error, string> =>
+): E.Either<FailedToGenerateHouseholdCode, string> =>
   E.right(base62.encodeStr((1000 + householdId).toString()));
 
 export const addHousehold = (

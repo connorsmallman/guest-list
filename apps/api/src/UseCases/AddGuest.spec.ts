@@ -1,11 +1,12 @@
 import { randEmail, randFullName, randUuid } from '@ngneat/falso';
-import { taskEither as TE, either as E, option as O } from 'fp-ts';
+import { taskEither as TE, either as E } from 'fp-ts';
 
 import { AddGuest } from './AddGuest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
 import { createGuest } from '../Domain/Guest';
 import { pipe } from 'fp-ts/function';
+import { FailedToAddGuest } from '../Domain/problems/FailedToAddGuest';
 
 describe('Add guest', () => {
   test('add new guest', async () => {
@@ -86,5 +87,58 @@ describe('Add guest', () => {
 
     const response = await useCase.execute(command)();
     expect(response).toEqual(E.left(new GuestWithThatNameAlreadyExists()));
+  });
+
+  test('should fail if unable to create guest', async () => {
+    const findMock = jest.fn();
+    const saveMock = jest.fn();
+    const GuestRepositoryMock = <jest.Mock<GuestListRepository>>jest.fn(() => ({
+      find: findMock,
+      save: saveMock,
+    }));
+    const guestListMock = {
+      guests: [],
+      households: [],
+    };
+    findMock.mockReturnValue(TE.of(guestListMock));
+    saveMock.mockReturnValue(TE.of(guestListMock));
+    const useCase = new AddGuest(new GuestRepositoryMock());
+    const guestEmail = randEmail();
+    const guestId = randUuid();
+    const command = {
+      name: 'h',
+      email: guestEmail,
+      id: guestId,
+    };
+
+    const response = await useCase.execute(command)();
+    expect(response).toEqual(E.left(new FailedToAddGuest()));
+  });
+
+  test('should fail if save fails', async () => {
+    const findMock = jest.fn();
+    const saveMock = jest.fn();
+    const GuestRepositoryMock = <jest.Mock<GuestListRepository>>jest.fn(() => ({
+      find: findMock,
+      save: saveMock,
+    }));
+    const guestListMock = {
+      guests: [],
+      households: [],
+    };
+    findMock.mockReturnValue(TE.of(guestListMock));
+    saveMock.mockReturnValue(TE.left(new Error('could not save')));
+    const useCase = new AddGuest(new GuestRepositoryMock());
+    const guestName = randFullName();
+    const guestEmail = randEmail();
+    const guestId = randUuid();
+    const command = {
+      name: guestName,
+      email: guestEmail,
+      id: guestId,
+    };
+
+    const response = await useCase.execute(command)();
+    expect(response).toEqual(E.left(new FailedToAddGuest()));
   });
 });

@@ -15,5 +15,8 @@
   "devDependencies": {
     "prettier": "latest",
     "turbo": "latest"
+  },
+  "dependencies": {
+    "io-ts": "^2.2.16"
   }
 }

@@ -2,11 +2,15 @@ import { taskEither as TE, either as E, option as O } from 'fp-ts';
 import { randEmail, randFullName, randUuid } from '@ngneat/falso';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { generateHouseholdCode, getNextHouseholdId } from '../Domain/GuestList';
-import { createGuest, Guest } from '../Domain/Guest';
+import {
+  generateHouseholdCode,
+  getNextHouseholdId,
+  GuestList,
+} from '../Domain/GuestList';
+import { Guest } from '../Domain/Guest';
 import { pipe } from 'fp-ts/function';
 import { AddGuestToHousehold } from './AddGuestToHousehold';
-import { createHousehold, Household } from '../Domain/Household';
+import { Household } from '../Domain/Household';
 import { GuestNotFound } from '../Domain/problems/GuestNotFound';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { FailedToAddGuestToHousehold } from '../Domain/problems/FailedToAddGuestToHousehold';
@@ -19,10 +23,7 @@ describe('add guest to household', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
 
@@ -31,7 +32,7 @@ describe('add guest to household', () => {
     const guestId = randUuid();
 
     const guest: Guest = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
+      Guest.create({ name: guestName, email: guestEmail }, guestId),
       E.getOrElse(() => {
         throw new Error('Failed to create guest');
       }),
@@ -52,7 +53,7 @@ describe('add guest to household', () => {
     );
 
     const household: Household = pipe(
-      createHousehold({ id: householdId, code: householdCode }),
+      Household.create({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -83,10 +84,7 @@ describe('add guest to household', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
 
@@ -109,10 +107,7 @@ describe('add guest to household', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
 
@@ -121,7 +116,7 @@ describe('add guest to household', () => {
     const guestId = randUuid();
 
     const guest: Guest = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
+      Guest.create({ name: guestName, email: guestEmail }, guestId),
       E.getOrElse(() => {
         throw new Error('Failed to create guest');
       }),
@@ -142,7 +137,7 @@ describe('add guest to household', () => {
     );
 
     const household: Household = pipe(
-      createHousehold({ id: householdId, code: householdCode }),
+      Household.create({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -175,10 +170,7 @@ describe('add guest to household', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.left(new Error('Failed to save')));
 
@@ -187,7 +179,7 @@ describe('add guest to household', () => {
     const guestId = randUuid();
 
     const guest: Guest = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
+      Guest.create({ name: guestName, email: guestEmail }, guestId),
       E.getOrElse(() => {
         throw new Error('Failed to create guest');
       }),
@@ -208,7 +200,7 @@ describe('add guest to household', () => {
     );
 
     const household: Household = pipe(
-      createHousehold({ id: householdId, code: householdCode }),
+      Household.create({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),

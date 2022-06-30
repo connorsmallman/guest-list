@@ -22,13 +22,33 @@ import { GuestsNotFoundInHousehold } from './problems/GuestsNotFoundInHousehold'
 import { HouseholdId } from './HouseholdId';
 import { FailedToGetNextHouseholdId } from './problems/FailedToGetNextHouseholdId';
 import { FailedToGenerateHouseholdCode } from './problems/FailedToGenerateHouseholdCode';
+import { GuestListDTO } from '../DTOs/GuestListDTO';
 
 const base62 = Base62str.createInstance();
 
-export type GuestList = {
+type GuestListProps = {
+  households?: Household[];
+  guests?: Guest[];
+};
+
+export class GuestList {
   households: Household[];
   guests: Guest[];
-};
+
+  public static create(props: GuestListProps) {
+    return {
+      guests: props.guests || [],
+      households: props.households || [],
+    };
+  }
+
+  public static toDTO(guestList: GuestList): GuestListDTO {
+    return {
+      households: guestList.households.map(Household.toDTO),
+      guests: guestList.guests.map(Guest.toDTO),
+    };
+  }
+}
 
 export const getNextHouseholdId = (
   guestList: GuestList,

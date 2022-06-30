@@ -1,12 +1,13 @@
 import { pipe } from 'fp-ts/function';
-import { taskEither as TE, array as A, either as E } from 'fp-ts';
+import { taskEither as TE, array as A, either as E, option as O } from 'fp-ts';
 
 import { GuestDTO } from '../DTOs/GuestDTO';
 import { GuestList, rsvp } from '../Domain/GuestList';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { createGuest } from '../Domain/Guest';
+import { Guest } from '../Domain/Guest';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { GuestsNotFoundInHousehold } from '../Domain/problems/GuestsNotFoundInHousehold';
+import { GuestListDTO } from '../DTOs/GuestListDTO';
 
 type Command = {
   householdCode: string;
@@ -20,7 +21,7 @@ export class RSVP {
     command: Command,
   ): TE.TaskEither<
     HouseholdNotFound | GuestsNotFoundInHousehold | Error,
-    GuestList
+    GuestListDTO
   > {
     return pipe(
       TE.Do,
@@ -29,14 +30,14 @@ export class RSVP {
         pipe(
           command.guests,
           A.traverse(E.Applicative)((g) =>
-            createGuest(
+            Guest.create(
               {
                 name: g.name,
                 email: g.email,
                 dietaryRequirements: g.dietaryRequirements,
                 attending: g.attending,
                 isChild: g.isChild,
-                householdId: g.householdId,
+                household: g.household,
               },
               g.id,
             ),
@@ -48,6 +49,7 @@ export class RSVP {
         pipe(rsvp(guestList, command.householdCode, guests), TE.fromEither),
       ),
       TE.chainFirst(this.guestListRepository.save),
+      TE.map(GuestList.toDTO),
     );
   }
 }

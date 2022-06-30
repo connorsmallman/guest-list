@@ -1,9 +1,9 @@
 export type GuestDTO = {
-  id?: string;
+  id: string;
   name: string;
-  email?: string;
-  dietaryRequirements: string;
-  attending: boolean;
+  email: string;
+  dietaryRequirements: string | null;
+  attending: boolean | null;
   isChild: boolean;
-  householdId: number;
+  household: number | null;
 };

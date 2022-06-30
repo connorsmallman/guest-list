@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { taskEither as TE } from 'fp-ts';
+import { taskEither as TE, option as O } from 'fp-ts';
 import { pipe } from 'fp-ts/function';
 
-import { createGuest, Guest } from '../Domain/Guest';
+import { Guest } from '../Domain/Guest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { addGuestToList } from '../Domain/GuestList';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
 import { FailedToAddGuest } from '../Domain/problems/FailedToAddGuest';
 import { FailedToCreateGuest } from '../Domain/problems/FailedtoCreateGuest';
+import { GuestDTO } from '../DTOs/GuestDTO';
 
 type Command = {
   id?: string;
@@ -26,13 +27,16 @@ export class AddGuest {
     command: Command,
   ): TE.TaskEither<
     FailedToAddGuest | FailedToCreateGuest | GuestWithThatNameAlreadyExists,
-    Guest
+    GuestDTO
   > {
     return pipe(
       TE.Do,
       TE.bind('guest', () =>
         pipe(
-          createGuest({ name: command.name, email: command.email }, command.id),
+          Guest.create(
+            { name: command.name, email: command.email },
+            command.id,
+          ),
           TE.fromEither,
           TE.mapLeft(() => new FailedToAddGuest()),
         ),
@@ -52,7 +56,7 @@ export class AddGuest {
           TE.mapLeft(() => new FailedToAddGuest()),
         ),
       ),
-      TE.map(({ guest }) => guest),
+      TE.map(({ guest }) => Guest.toDTO(guest)),
     );
   }
 }

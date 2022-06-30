@@ -5,8 +5,9 @@ import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { GuestNotFound } from '../Domain/problems/GuestNotFound';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { addGuestToHousehold } from '../Domain/GuestList';
-import { Household } from '../Domain/Household';
 import { FailedToAddGuestToHousehold } from '../Domain/problems/FailedToAddGuestToHousehold';
+import { HouseholdDTO } from '../DTOs/HouseholdDTO';
+import { Household } from '../Domain/Household';
 
 type Command = {
   householdId: number;
@@ -21,7 +22,7 @@ export class AddGuestToHousehold {
     command: Command,
   ): TE.TaskEither<
     GuestNotFound | HouseholdNotFound | FailedToAddGuestToHousehold,
-    Household
+    HouseholdDTO
   > {
     return pipe(
       this.guestListRepository.find(),
@@ -47,6 +48,7 @@ export class AddGuestToHousehold {
           TE.fromEither,
         ),
       ),
+      TE.map(Household.toDTO),
     );
   }
 }

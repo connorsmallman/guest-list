@@ -4,9 +4,10 @@ import { taskEither as TE, either as E } from 'fp-ts';
 import { AddGuest } from './AddGuest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
-import { createGuest } from '../Domain/Guest';
+import { Guest } from '../Domain/Guest';
 import { pipe } from 'fp-ts/function';
 import { FailedToAddGuest } from '../Domain/problems/FailedToAddGuest';
+import { GuestList } from '../Domain/GuestList';
 
 describe('Add guest', () => {
   test('add new guest', async () => {
@@ -33,7 +34,7 @@ describe('Add guest', () => {
     };
 
     const guest = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
+      Guest.create({ name: guestName, email: guestEmail }, guestId),
       E.getOrElse(() => {
         throw new Error('could not create guest');
       }),
@@ -50,7 +51,7 @@ describe('Add guest', () => {
       guests: [guest],
       households: [],
     });
-    expect(response.right).toEqual(guest);
+    expect(response.right).toEqual(Guest.toDTO(guest));
   });
 
   test('should fail if guest already exists', async () => {
@@ -60,10 +61,7 @@ describe('Add guest', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(guestListMock));
     const useCase = new AddGuest(new GuestRepositoryMock());
@@ -77,7 +75,7 @@ describe('Add guest', () => {
     };
 
     const guest = pipe(
-      createGuest({ name: guestName, email: guestEmail }, guestId),
+      Guest.create({ name: guestName, email: guestEmail }, guestId),
       E.getOrElse(() => {
         throw new Error('could not create guest');
       }),
@@ -96,10 +94,7 @@ describe('Add guest', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(guestListMock));
     const useCase = new AddGuest(new GuestRepositoryMock());
@@ -122,10 +117,7 @@ describe('Add guest', () => {
       find: findMock,
       save: saveMock,
     }));
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.left(new Error('could not save')));
     const useCase = new AddGuest(new GuestRepositoryMock());

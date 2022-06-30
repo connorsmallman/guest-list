@@ -3,10 +3,14 @@ import { randEmail, randFood, randFullName, randUuid } from '@ngneat/falso';
 import { either as E, taskEither as TE, option as O } from 'fp-ts';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { createGuest, Guest } from '../Domain/Guest';
+import { Guest } from '../Domain/Guest';
 import { RSVP } from './RSVP';
-import { createHousehold, Household } from '../Domain/Household';
-import { generateHouseholdCode, getNextHouseholdId } from '../Domain/GuestList';
+import { Household } from '../Domain/Household';
+import {
+  generateHouseholdCode,
+  getNextHouseholdId,
+  GuestList,
+} from '../Domain/GuestList';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { GuestDTO } from '../DTOs/GuestDTO';
 
@@ -20,10 +24,7 @@ describe('RSVP', () => {
         save: saveMock,
       }),
     );
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     const householdId: number = pipe(
       getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
@@ -37,7 +38,7 @@ describe('RSVP', () => {
       }),
     );
     const household: Household = pipe(
-      createHousehold({ id: householdId, code: householdCode }),
+      Household.create({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -46,8 +47,8 @@ describe('RSVP', () => {
     const guestEmail1 = randEmail();
     const guestId1 = randUuid();
     const guest1: Guest = pipe(
-      createGuest(
-        { name: guestName1, email: guestEmail1, householdId: household.id },
+      Guest.create(
+        { name: guestName1, email: guestEmail1, household: household.id },
         guestId1,
       ),
       E.getOrElse(() => {
@@ -59,8 +60,8 @@ describe('RSVP', () => {
     const guestEmail2 = randEmail();
     const guestId2 = randUuid();
     const guest2: Guest = pipe(
-      createGuest(
-        { name: guestName2, email: guestEmail2, householdId: household.id },
+      Guest.create(
+        { name: guestName2, email: guestEmail2, household: household.id },
         guestId2,
       ),
       E.getOrElse(() => {
@@ -92,7 +93,7 @@ describe('RSVP', () => {
           dietaryRequirements: dietaryRequirements,
           attending: isAttending,
           isChild: isChild,
-          householdId: household.id,
+          household: household.id,
         },
         {
           id: guestId2,
@@ -101,7 +102,7 @@ describe('RSVP', () => {
           dietaryRequirements: dietaryRequirements,
           attending: isAttending,
           isChild: isChild,
-          householdId: household.id,
+          household: household.id,
         },
       ],
     })();
@@ -109,23 +110,25 @@ describe('RSVP', () => {
     expect(findMock).toHaveBeenCalled();
     expect(saveMock).toHaveBeenCalled();
     expect(response).toEqual(
-      E.right({
-        guests: [
-          {
-            ...guest1,
-            dietaryRequirements: O.some(dietaryRequirements),
-            attending: O.some(isAttending),
-            isChild: isChild,
-          },
-          {
-            ...guest2,
-            dietaryRequirements: O.some(dietaryRequirements),
-            attending: O.some(isAttending),
-            isChild: isChild,
-          },
-        ],
-        households: [household],
-      }),
+      E.right(
+        GuestList.toDTO({
+          guests: [
+            {
+              ...guest1,
+              dietaryRequirements: O.some(dietaryRequirements),
+              attending: O.some(isAttending),
+              isChild: isChild,
+            },
+            {
+              ...guest2,
+              dietaryRequirements: O.some(dietaryRequirements),
+              attending: O.some(isAttending),
+              isChild: isChild,
+            },
+          ],
+          households: [household],
+        }),
+      ),
     );
   });
 
@@ -138,10 +141,7 @@ describe('RSVP', () => {
         save: saveMock,
       }),
     );
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     const householdId: number = pipe(
       getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
@@ -155,7 +155,7 @@ describe('RSVP', () => {
       }),
     );
     const household: Household = pipe(
-      createHousehold({ id: householdId, code: householdCode }),
+      Household.create({ id: householdId, code: householdCode }),
       E.getOrElse(() => {
         throw new Error('Failed to create household');
       }),
@@ -170,7 +170,7 @@ describe('RSVP', () => {
       dietaryRequirements: '',
       attending: true,
       isChild: true,
-      householdId: 1,
+      household: 1,
     };
 
     guestListMock.households.push(household);

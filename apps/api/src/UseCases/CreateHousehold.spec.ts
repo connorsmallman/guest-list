@@ -1,6 +1,7 @@
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { taskEither as TE } from 'fp-ts';
 import { CreateHousehold } from './CreateHousehold';
+import { GuestList } from '../Domain/GuestList';
 
 describe('Create Household', () => {
   test('should add a new household', async () => {
@@ -12,10 +13,7 @@ describe('Create Household', () => {
         save: saveMock,
       }),
     );
-    const guestListMock = {
-      guests: [],
-      households: [],
-    };
+    const guestListMock = GuestList.create({});
     findMock.mockReturnValue(TE.of(guestListMock));
     saveMock.mockReturnValue(TE.of(null));
 

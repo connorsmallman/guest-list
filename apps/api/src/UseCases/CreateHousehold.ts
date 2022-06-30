@@ -1,20 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { pipe } from 'fp-ts/function';
-import { taskEither as TE, io as IO } from 'fp-ts';
+import { taskEither as TE } from 'fp-ts';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { createHousehold, Household } from '../Domain/Household';
+import { Household } from '../Domain/Household';
 import {
   addHousehold,
   generateHouseholdCode,
   getNextHouseholdId,
 } from '../Domain/GuestList';
 import { FailedToCreateHousehold } from '../Domain/problems/FailedToCreateHousehold';
+import { HouseholdDTO } from '../DTOs/HouseholdDTO';
 
 @Injectable()
 export class CreateHousehold {
   constructor(readonly guestListRepository: GuestListRepository) {}
-  execute(): TE.TaskEither<FailedToCreateHousehold, Household> {
+  execute(): TE.TaskEither<FailedToCreateHousehold, HouseholdDTO> {
     return pipe(
       TE.Do,
       TE.bind('guestList', this.guestListRepository.find),
@@ -33,7 +34,7 @@ export class CreateHousehold {
         ),
       ),
       TE.bind('household', ({ id, code }) =>
-        pipe(createHousehold({ id, code }), TE.fromEither),
+        pipe(Household.create({ id, code }), TE.fromEither),
       ),
       TE.chain(({ guestList, household }) =>
         pipe(
@@ -52,7 +53,11 @@ export class CreateHousehold {
           TE.mapLeft(() => new FailedToCreateHousehold()),
         ),
       ),
-      TE.map(({ household }) => household),
+      TE.map(({ household }) => ({
+        id: household.id,
+        code: household.code,
+        guests: household.guests,
+      })),
     );
   }
 }

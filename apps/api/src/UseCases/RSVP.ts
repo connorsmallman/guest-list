@@ -2,7 +2,7 @@ import { pipe } from 'fp-ts/function';
 import { taskEither as TE, array as A, either as E, option as O } from 'fp-ts';
 
 import { GuestDTO } from '../DTOs/GuestDTO';
-import { GuestList, rsvp } from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { Guest } from '../Domain/Guest';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
@@ -46,7 +46,10 @@ export class RSVP {
         ),
       ),
       TE.chain(({ guestList, guests }) =>
-        pipe(rsvp(guestList, command.householdCode, guests), TE.fromEither),
+        pipe(
+          GuestList.rsvp(guestList, command.householdCode, guests),
+          TE.fromEither,
+        ),
       ),
       TE.chainFirst(this.guestListRepository.save),
       TE.map(GuestList.toDTO),

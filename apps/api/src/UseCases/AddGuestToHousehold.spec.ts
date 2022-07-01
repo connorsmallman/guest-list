@@ -2,11 +2,7 @@ import { taskEither as TE, either as E, option as O } from 'fp-ts';
 import { randEmail, randFullName, randUuid } from '@ngneat/falso';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import {
-  generateHouseholdCode,
-  getNextHouseholdId,
-  GuestList,
-} from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { Guest } from '../Domain/Guest';
 import { pipe } from 'fp-ts/function';
 import { AddGuestToHousehold } from './AddGuestToHousehold';
@@ -39,14 +35,14 @@ describe('add guest to household', () => {
     );
 
     const householdId = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to generate houseId');
       }),
     );
 
     const householdCode = pipe(
-      generateHouseholdCode(householdId),
+      GuestList.generateHouseholdCode(householdId),
       E.getOrElse(() => {
         throw new Error('Failed to generate household code');
       }),
@@ -123,14 +119,14 @@ describe('add guest to household', () => {
     );
 
     const householdId = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to generate houseId');
       }),
     );
 
     const householdCode = pipe(
-      generateHouseholdCode(householdId),
+      GuestList.generateHouseholdCode(householdId),
       E.getOrElse(() => {
         throw new Error('Failed to generate household code');
       }),
@@ -147,7 +143,7 @@ describe('add guest to household', () => {
     guestListMock.households.push(household);
 
     const householdId2 = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to generate houseId');
       }),
@@ -186,14 +182,14 @@ describe('add guest to household', () => {
     );
 
     const householdId = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to generate houseId');
       }),
     );
 
     const householdCode = pipe(
-      generateHouseholdCode(householdId),
+      GuestList.generateHouseholdCode(householdId),
       E.getOrElse(() => {
         throw new Error('Failed to generate household code');
       }),

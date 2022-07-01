@@ -6,11 +6,7 @@ import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { Guest } from '../Domain/Guest';
 import { RSVP } from './RSVP';
 import { Household } from '../Domain/Household';
-import {
-  generateHouseholdCode,
-  getNextHouseholdId,
-  GuestList,
-} from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
 import { GuestDTO } from '../DTOs/GuestDTO';
 
@@ -26,13 +22,13 @@ describe('RSVP', () => {
     );
     const guestListMock = GuestList.create({});
     const householdId: number = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to get next household id');
       }),
     );
     const householdCode: string = pipe(
-      generateHouseholdCode(householdId),
+      GuestList.generateHouseholdCode(householdId),
       E.getOrElse(() => {
         throw new Error('Failed to generate household code');
       }),
@@ -143,13 +139,13 @@ describe('RSVP', () => {
     );
     const guestListMock = GuestList.create({});
     const householdId: number = pipe(
-      getNextHouseholdId(guestListMock),
+      GuestList.getNextHouseholdId(guestListMock),
       E.getOrElse(() => {
         throw new Error('Failed to get next household id');
       }),
     );
     const householdCode: string = pipe(
-      generateHouseholdCode(householdId),
+      GuestList.generateHouseholdCode(householdId),
       E.getOrElse(() => {
         throw new Error('Failed to generate household code');
       }),

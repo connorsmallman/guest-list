@@ -4,7 +4,7 @@ import { pipe } from 'fp-ts/function';
 
 import { Guest } from '../Domain/Guest';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
-import { addGuestToList } from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { GuestWithThatNameAlreadyExists } from '../Domain/problems/GuestWithThatNameAlreadyExists';
 import { FailedToAddGuest } from '../Domain/problems/FailedToAddGuest';
 import { FailedToCreateGuest } from '../Domain/problems/FailedtoCreateGuest';
@@ -44,7 +44,7 @@ export class AddGuest {
       TE.bind('guestList', this.guestListRepository.find),
       TE.chain(({ guest, guestList }) =>
         pipe(
-          addGuestToList(guestList, guest),
+          GuestList.addGuestToList(guestList, guest),
           TE.fromEither,
           TE.map((guestList) => ({ guest, guestList })),
           TE.mapLeft(() => new FailedToAddGuest()),

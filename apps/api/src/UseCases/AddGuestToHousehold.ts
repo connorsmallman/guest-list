@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { GuestNotFound } from '../Domain/problems/GuestNotFound';
 import { HouseholdNotFound } from '../Domain/problems/HouseholdNotFound';
-import { addGuestToHousehold } from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { FailedToAddGuestToHousehold } from '../Domain/problems/FailedToAddGuestToHousehold';
 import { HouseholdDTO } from '../DTOs/HouseholdDTO';
 import { Household } from '../Domain/Household';
@@ -30,7 +30,7 @@ export class AddGuestToHousehold {
         pipe(
           command,
           ({ householdId, guestId }) =>
-            addGuestToHousehold(guestList, householdId, guestId),
+            GuestList.addGuestToHousehold(guestList, householdId, guestId),
           TE.fromEither,
         ),
       ),

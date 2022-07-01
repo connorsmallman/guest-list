@@ -4,11 +4,7 @@ import { taskEither as TE } from 'fp-ts';
 
 import { GuestListRepository } from '../Repositories/GuestListRepository';
 import { Household } from '../Domain/Household';
-import {
-  addHousehold,
-  generateHouseholdCode,
-  getNextHouseholdId,
-} from '../Domain/GuestList';
+import { GuestList } from '../Domain/GuestList';
 import { FailedToCreateHousehold } from '../Domain/problems/FailedToCreateHousehold';
 import { HouseholdDTO } from '../DTOs/HouseholdDTO';
 
@@ -21,14 +17,14 @@ export class CreateHousehold {
       TE.bind('guestList', this.guestListRepository.find),
       TE.bind('id', ({ guestList }) =>
         pipe(
-          getNextHouseholdId(guestList),
+          GuestList.getNextHouseholdId(guestList),
           TE.fromEither,
           TE.mapLeft(() => new FailedToCreateHousehold()),
         ),
       ),
       TE.bind('code', ({ id }) =>
         pipe(
-          generateHouseholdCode(id),
+          GuestList.generateHouseholdCode(id),
           TE.fromEither,
           TE.mapLeft(() => new FailedToCreateHousehold()),
         ),
@@ -38,7 +34,7 @@ export class CreateHousehold {
       ),
       TE.chain(({ guestList, household }) =>
         pipe(
-          addHousehold(guestList, household),
+          GuestList.addHousehold(guestList, household),
           TE.fromEither,
           TE.map((updatedGuestList) => ({
             guestList: updatedGuestList,

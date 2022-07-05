@@ -1,7 +1,7 @@
 export type GuestDTO = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   dietaryRequirements: string | null;
   attending: boolean | null;
   isChild: boolean;

@@ -61,6 +61,17 @@ export class GuestList {
     return E.right(base62.encodeStr((1000 + householdId).toString()));
   }
 
+  public static findHousehold(
+    guestList: GuestList,
+    householdCode: HouseholdCode,
+  ): E.Either<HouseholdNotFound, Household> {
+    return pipe(
+      guestList.households,
+      A.findFirst((h) => h.code === householdCode),
+      E.fromOption(() => new HouseholdNotFound()),
+    );
+  }
+
   public static addHousehold(
     guestList: GuestList,
     household: Household,

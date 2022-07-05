@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GuestsController } from './Infrastructure/http/GuestsController';
+import { AddGuest } from './UseCases/AddGuest';
+import { GuestListRepository } from './Repositories/GuestListRepository';
+import { CreateHousehold } from './UseCases/CreateHousehold';
 
 @Module({
   imports: [
@@ -16,7 +20,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       logging: ['query'],
     }),
   ],
-  controllers: [],
-  providers: [],
+  controllers: [GuestsController],
+  providers: [AddGuest, CreateHousehold, GuestListRepository],
 })
 export class App {}

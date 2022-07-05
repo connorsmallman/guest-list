@@ -104,28 +104,24 @@ describe('RSVP', () => {
     })();
 
     expect(findMock).toHaveBeenCalled();
-    expect(saveMock).toHaveBeenCalled();
-    expect(response).toEqual(
-      E.right(
-        GuestList.toDTO({
-          guests: [
-            {
-              ...guest1,
-              dietaryRequirements: O.some(dietaryRequirements),
-              attending: O.some(isAttending),
-              isChild: isChild,
-            },
-            {
-              ...guest2,
-              dietaryRequirements: O.some(dietaryRequirements),
-              attending: O.some(isAttending),
-              isChild: isChild,
-            },
-          ],
-          households: [household],
-        }),
-      ),
-    );
+    expect(saveMock).toHaveBeenCalledWith({
+      guests: [
+        {
+          ...guest1,
+          dietaryRequirements: O.some(dietaryRequirements),
+          attending: O.some(isAttending),
+          isChild: isChild,
+        },
+        {
+          ...guest2,
+          dietaryRequirements: O.some(dietaryRequirements),
+          attending: O.some(isAttending),
+          isChild: isChild,
+        },
+      ],
+      households: [household],
+    });
+    expect(response).toEqual(E.right(Household.toDTO(household)));
   });
 
   test('should fail if household not found', async () => {
